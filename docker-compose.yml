@@ -1,0 +1,117 @@
+# IA local para ZimaOS: lee PDF, Word, Excel y planos DWG/DXF.
+#
+#   ollama      -> ejecuta los modelos de IA en el propio servidor (nada sale a internet)
+#   modelos     -> descarga los modelos la primera vez y termina
+#   conversor   -> convierte PDF/Word/Excel/DWG a texto (con OCR para escaneos)
+#   open-webui  -> la interfaz tipo ChatGPT, en http://IP-DEL-ZIMA:3000
+#
+# Los valores ${VARIABLE:-valor} se pueden cambiar en el archivo .env (ver .env.example).
+
+name: ia-local
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ia-ollama
+    restart: unless-stopped
+    volumes:
+      - /DATA/AppData/ia-local/ollama:/root/.ollama
+    environment:
+      # Contexto de 8K tokens: permite pasarle trozos de documentos más grandes.
+      OLLAMA_CONTEXT_LENGTH: ${CONTEXTO_TOKENS:-8192}
+      # Mantener el modelo cargado 30 min evita esperar a que cargue en cada pregunta.
+      OLLAMA_KEEP_ALIVE: 30m
+      # Modelo de chat + modelo de embeddings cargados a la vez.
+      OLLAMA_MAX_LOADED_MODELS: "2"
+      OLLAMA_NUM_PARALLEL: "1"
+    # Descomenta para usar Ollama desde otros programas de la red (puerto 11434).
+    # ports:
+    #   - "11434:11434"
+    # Si tu Zima tiene una tarjeta NVIDIA (con el driver instalado), descomenta:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  modelos:
+    image: ollama/ollama:latest
+    container_name: ia-descarga-modelos
+    restart: "no"
+    depends_on:
+      - ollama
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      MODELO_CHAT: ${MODELO_CHAT:-gemma3:4b}
+      MODELO_EMBEDDINGS: ${MODELO_EMBEDDINGS:-bge-m3}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        until ollama list > /dev/null 2>&1; do echo "Esperando a Ollama..."; sleep 3; done
+        ollama pull "$$MODELO_EMBEDDINGS" && ollama pull "$$MODELO_CHAT" && echo "Modelos listos."
+
+  conversor:
+    image: ghcr.io/jif2012/ia-local-conversor:latest
+    build: ./conversor
+    container_name: ia-conversor
+    restart: unless-stopped
+    environment:
+      CONVERSOR_API_KEY: ${CONVERSOR_API_KEY:-cambia-esta-clave}
+      OCR_IDIOMAS: spa+eng
+      CONVERSOR_CONCURRENCIA: "2"
+    volumes:
+      # Solo lectura: permite convertir archivos del NAS a mano con
+      #   docker exec ia-conversor convertir /datos/Documents/plano.dwg
+      - /DATA:/datos:ro
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: ia-open-webui
+    restart: unless-stopped
+    depends_on:
+      - ollama
+      - conversor
+    ports:
+      - "${PUERTO_WEB:-3000}:8080"
+    volumes:
+      - /DATA/AppData/ia-local/open-webui:/app/backend/data
+    environment:
+      WEBUI_NAME: IA Local
+      DEFAULT_LOCALE: es-ES
+      OLLAMA_BASE_URL: http://ollama:11434
+      DEFAULT_MODELS: ${MODELO_CHAT:-gemma3:4b}
+      # --- Lectura de documentos: todos los archivos pasan por el conversor
+      CONTENT_EXTRACTION_ENGINE: external
+      EXTERNAL_DOCUMENT_LOADER_URL: http://conversor:8000
+      EXTERNAL_DOCUMENT_LOADER_API_KEY: ${CONVERSOR_API_KEY:-cambia-esta-clave}
+      # Algunos navegadores marcan los DWG/DXF como "imagen"; así igual se procesan.
+      CONTENT_EXTRACTION_SUPPORTED_MEDIA_MIME_TYPES: image/vnd.dwg,image/x-dwg,image/vnd.dxf,image/x-dxf
+      # --- Búsqueda en documentos (RAG) con embeddings multilingües (buenos en español)
+      RAG_EMBEDDING_ENGINE: ollama
+      RAG_EMBEDDING_MODEL: ${MODELO_EMBEDDINGS:-bge-m3}
+      CHUNK_SIZE: "1500"
+      CHUNK_OVERLAP: "150"
+      RAG_TOP_K: "6"
+
+x-casaos:
+  architectures:
+    - amd64
+  main: open-webui
+  author: JIF2012
+  developer: Ollama + Open WebUI
+  category: AI
+  icon: https://raw.githubusercontent.com/open-webui/open-webui/main/static/favicon.png
+  index: /
+  port_map: "3000"
+  scheme: http
+  title:
+    en_us: IA Local
+    es_es: IA Local
+  tagline:
+    en_us: Local AI that reads PDF, Word, Excel and DWG files
+    es_es: IA local que lee PDF, Word, Excel y planos DWG
+  description:
+    en_us: Ollama + Open WebUI with a document converter for PDF (OCR), Word, Excel and AutoCAD DWG/DXF. Everything runs on your server.
+    es_es: Ollama + Open WebUI con un conversor de documentos PDF (con OCR), Word, Excel y planos AutoCAD DWG/DXF. Todo corre en tu servidor.
