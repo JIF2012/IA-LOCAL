@@ -20,6 +20,15 @@ if [ ! -f .env ]; then
   echo "Se creó .env con una clave nueva para el conversor."
 fi
 
+GPU_COMPOSE="COMPOSE_FILE=docker-compose.yml:docker-compose.gpu.yml"
+if docker info 2> /dev/null | grep -qi nvidia; then
+  echo "==> Tarjeta NVIDIA disponible para Docker: la IA usará la tarjeta gráfica."
+  grep -q '^COMPOSE_FILE=' .env || echo "$GPU_COMPOSE" >> .env
+else
+  echo "==> No se detectó una tarjeta NVIDIA usable por Docker: la IA usará el procesador (más lento)."
+  sed -i '/^COMPOSE_FILE=/d' .env
+fi
+
 mkdir -p /DATA/AppData/ia-local/ollama /DATA/AppData/ia-local/open-webui
 
 echo "==> Descargando Ollama y Open WebUI..."
@@ -32,7 +41,12 @@ if ! $COMPOSE pull conversor 2> /dev/null; then
 fi
 
 echo "==> Iniciando..."
-$COMPOSE up -d
+if ! $COMPOSE up -d; then
+  grep -q '^COMPOSE_FILE=' .env || exit 1
+  echo "    No se pudo iniciar usando la tarjeta gráfica; se reintenta solo con el procesador."
+  sed -i '/^COMPOSE_FILE=/d' .env
+  $COMPOSE up -d
+fi
 
 IP=$(hostname -I 2> /dev/null | awk '{print $1}')
 PUERTO=$(grep -E '^PUERTO_WEB=' .env | cut -d= -f2)

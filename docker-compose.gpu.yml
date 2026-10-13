@@ -1,0 +1,13 @@
+# Uso de tarjeta gráfica NVIDIA para la IA (mucho más rápido que el procesador).
+# instalar.sh lo activa solo cuando Docker tiene acceso a la tarjeta, agregando a .env:
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.gpu.yml
+
+services:
+  ollama:
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

@@ -27,14 +27,7 @@ services:
     # Descomenta para usar Ollama desde otros programas de la red (puerto 11434).
     # ports:
     #   - "11434:11434"
-    # Si tu Zima tiene una tarjeta NVIDIA (con el driver instalado), descomenta:
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: all
-    #           capabilities: [gpu]
+    # La tarjeta gráfica NVIDIA se activa con docker-compose.gpu.yml (instalar.sh lo hace solo).
 
   modelos:
     image: ollama/ollama:latest
@@ -44,7 +37,7 @@ services:
       - ollama
     environment:
       OLLAMA_HOST: http://ollama:11434
-      MODELO_CHAT: ${MODELO_CHAT:-gemma3:4b}
+      MODELO_CHAT: ${MODELO_CHAT:-qwen3:4b}
       MODELO_EMBEDDINGS: ${MODELO_EMBEDDINGS:-bge-m3}
     entrypoint: ["/bin/sh", "-c"]
     command:
@@ -81,7 +74,7 @@ services:
       WEBUI_NAME: IA Local
       DEFAULT_LOCALE: es-ES
       OLLAMA_BASE_URL: http://ollama:11434
-      DEFAULT_MODELS: ${MODELO_CHAT:-gemma3:4b}
+      DEFAULT_MODELS: ${MODELO_CHAT:-qwen3:4b}
       # --- Lectura de documentos: todos los archivos pasan por el conversor
       CONTENT_EXTRACTION_ENGINE: external
       EXTERNAL_DOCUMENT_LOADER_URL: http://conversor:8000

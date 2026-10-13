@@ -26,18 +26,20 @@ puede leer **PDF, Word, Excel, PowerPoint y planos AutoCAD (DWG/DXF)**.
 
 ## 1. Requisitos
 
-- ZimaOS (ZimaBoard, ZimaBlade, ZimaCube o un PC con ZimaOS) con procesador x86-64.
+- Un equipo con ZimaOS y procesador x86-64 (ZimaBoard, ZimaCube o un PC armado).
 - ~15 GB libres en disco para imágenes y modelos.
-- RAM: define qué modelo puedes usar.
+- RAM y tarjeta gráfica: definen qué modelo puedes usar.
 
-| RAM del Zima | `MODELO_CHAT` recomendado | Cómo se siente |
+| Equipo | `MODELO_CHAT` recomendado | Cómo se siente |
 |---|---|---|
-| 8 GB | `gemma3:4b` (por defecto) | Respuestas útiles, rápido en CPU. |
-| 16 GB | `gemma3:12b` o `qwen3:8b` | Mejor comprensión de documentos largos; más lento. |
+| 8 GB de RAM y/o tarjeta NVIDIA de 4 GB (p. ej. GTX 1050 Ti) | `qwen3:4b` (por defecto) | Con la tarjeta: respuestas en segundos. Solo con procesador: ~1 minuto. |
+| 16 GB | `qwen3:8b` o `gemma3:12b` | Mejor comprensión de documentos largos; más lento. |
 | 32 GB o más | `qwen3:30b` | Muy bueno y razonablemente rápido (solo activa una parte del modelo por palabra). |
 
-Sin tarjeta gráfica todo funciona, pero con paciencia: en un Intel N100 una respuesta con un
-modelo de 4B tarda de segundos a ~1 minuto; con 12B, varias veces más.
+**Tarjeta gráfica NVIDIA:** `instalar.sh` la detecta y la usa sola (archivo
+`docker-compose.gpu.yml`). Para que funcione, ZimaOS debe tener el driver de NVIDIA: en la
+terminal, `nvidia-smi` debe mostrar tu tarjeta. Si no la detecta, todo funciona igual, pero
+usando solo el procesador.
 
 ## 2. Instalación
 
@@ -155,7 +157,7 @@ Edita `/DATA/AppData/ia-local/.env` y vuelve a ejecutar `sudo sh instalar.sh`.
 
 | Variable | Por defecto | Para qué |
 |---|---|---|
-| `MODELO_CHAT` | `gemma3:4b` | Modelo que responde. Ver tabla de RAM. |
+| `MODELO_CHAT` | `qwen3:4b` | Modelo que responde. Ver tabla de requisitos. |
 | `MODELO_EMBEDDINGS` | `bge-m3` | Modelo que indexa documentos (multilingüe). |
 | `CONTEXTO_TOKENS` | `8192` | Cuánto texto lee el modelo de una vez. Bájalo a 4096 si falta RAM. |
 | `PUERTO_WEB` | `3000` | Puerto de la interfaz web. |
