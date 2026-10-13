@@ -37,7 +37,8 @@ $COMPOSE pull ollama modelos open-webui
 echo "==> Preparando el conversor de documentos..."
 if ! $COMPOSE pull conversor 2> /dev/null; then
   echo "    No hay imagen publicada; se construye en este equipo (puede tardar 10-20 min la primera vez)."
-  $COMPOSE build conversor
+  # "docker build" funciona aunque Docker no tenga el plugin buildx (que "compose build" exige).
+  docker build -t ghcr.io/jif2012/ia-local-conversor:latest ./conversor
 fi
 
 echo "==> Iniciando..."

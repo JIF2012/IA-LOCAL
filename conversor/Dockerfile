@@ -5,12 +5,15 @@
 FROM ubuntu:24.04 AS libredwg
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends build-essential pkg-config python3 xz-utils \
+ && apt-get install -y --no-install-recommends build-essential pkg-config python3 xz-utils curl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 # Si cambias la versión, actualiza también el sha256.
-ADD --checksum=sha256:62ebb73b984f865960f20ed26619ea5f8789d5e3fd088fa40a2598384da81275 \
-    https://github.com/LibreDWG/libredwg/releases/download/0.14/libredwg-0.14.tar.xz /tmp/libredwg.tar.xz
-RUN mkdir /tmp/libredwg \
+ARG LIBREDWG_VERSION=0.14
+ARG LIBREDWG_SHA256=62ebb73b984f865960f20ed26619ea5f8789d5e3fd088fa40a2598384da81275
+RUN curl -fsSL -o /tmp/libredwg.tar.xz \
+      "https://github.com/LibreDWG/libredwg/releases/download/${LIBREDWG_VERSION}/libredwg-${LIBREDWG_VERSION}.tar.xz" \
+ && echo "${LIBREDWG_SHA256}  /tmp/libredwg.tar.xz" | sha256sum -c - \
+ && mkdir /tmp/libredwg \
  && tar -xJf /tmp/libredwg.tar.xz -C /tmp/libredwg --strip-components=1 \
  && cd /tmp/libredwg \
  && ./configure --prefix=/opt/libredwg --disable-bindings --disable-docs --disable-static \
